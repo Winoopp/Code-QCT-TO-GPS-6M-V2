@@ -1,10 +1,14 @@
 #include <LoRa.h>
+#include <SPI.h>
 #define RXp2 16
 #define TXp2 17
 #include <Wire.h>
 #include <TinyGPS++.h>
-
 TinyGPSPlus gps;
+
+#define SS 5 
+#define RST 14 
+#define DIO0 26
 
 int countstop = 0;
 
@@ -90,29 +94,54 @@ float calculateHeading(int16_t x, int16_t y) {
 //__________________ MAIN________________//
 
 void setup() {
+  Serial.println("Starting setup...");
+
+  // กำหนดขา SPI ให้ตรงกับ ESP32
+  SPI.begin(18, 19, 23, SS);  // SCK=18, MISO=19, MOSI=23, SS=5
+  LoRa.setPins(SS, RST, DIO0);
+
+  // หน่วงนิดหนึ่งก่อนเริ่ม LoRa
+  delay(500);
+  LoRa.begin(433E6);
   Serial.begin(115200);
   Serial1.begin(9600, SERIAL_8N1, 4, -1); // RX GPS → D4
   Serial2.begin(9600, SERIAL_8N1, RXp2, TXp2);
   initQMC5883P();
   Serial.println("QMC5883P ready");
-  LoRa.begin(433E6);
 }
 
 void loop() {
   // อ่าน GPS
   while (Serial1.available() > 0) {
     gps.encode(Serial1.read());
+    delay(1);
   }
 
   // อ่าน compass
   int16_t x, y, z;
   readQMC5883PData(x, y, z);
   updateCalibration(x, y);
+
   double heading = calculateHeading(x, y);
+  LoRa.beginPacket();
+  LoRa.print("heading : ");
+  LoRa.println(heading);
+  LoRa.endPacket();
+
+  Serial.print("heading : ");
+  Serial.println(heading);
 
   if (gps.location.isUpdated()) {
+
     double currLat = gps.location.lat();
     double currLon = gps.location.lng();
+
+    LoRa.beginPacket();
+    LoRa.print("CurrLat : ");
+    LoRa.println(currLat);
+    LoRa.print("CurrLon : ");
+    LoRa.println(currLon);
+    LoRa.endPacket();
 
     double distance = TinyGPSPlus::distanceBetween(currLat, currLon, targetLat, targetLon);
     double bearing = TinyGPSPlus::courseTo(currLat, currLon, targetLat, targetLon);
@@ -146,11 +175,11 @@ void loop() {
   } else {
     // หาก GPS ขาดสัญญาณ
     countstop++;
-    if (countstop > 70) { // timeout
+    if (countstop > 100) { // timeout
       Serial2.println("ST");
       Serial.println("ST");
     }
-    delay(100);
+    delay(50);
   }
-  delay(50);
+  delay(100);
 }
