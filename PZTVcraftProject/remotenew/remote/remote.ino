@@ -575,7 +575,7 @@ void loop() {
 
   // โหมดอัตโนมัติ: รีโมท < 1200, mission upload แล้ว, ยังไม่จบ
     // โหมดอัตโนมัติ: รีโมท < 1200, mission upload แล้ว, ยังไม่จบ
-  Serial.printf("[STATE] uploaded=%d missionDone=%d wpCount=%d currentWp=%d\n", uploaded, missionDone, wpCount, currentWp);
+  Serial.printf("[STATE] rmon=%d uploaded=%d missionDone=%d wpCount=%d currentWp=%d\n", remoteon, uploaded, missionDone, wpCount, currentWp);
 
   if (remoteon < 1300 && uploaded && !missionDone && wpCount > 0) {
     digitalWrite(relaypin, false);
@@ -628,8 +628,7 @@ void loop() {
 
     } else {
       // GPS ไม่อัปเดต
-      countstop++;
-      if (countstop > 100) { // timeout
+      countstop++;      if (countstop > 100) { // timeout
         ledcWrite(H1pin, duty_1_5ms);
         ledcWrite(H2pin, duty_1_5ms);
         Serial.println("GPS_Time_Out");
