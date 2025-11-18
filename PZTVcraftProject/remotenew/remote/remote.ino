@@ -336,16 +336,15 @@ void setup() {
   Serial.begin(115200);
 
   // คุณใช้ ledcAttach() ได้อยู่แล้ว → ใช้ต่อไป
-  ledcAttach(H1pin, 50, 16);
-  ledcAttach(H2pin, 50, 16);
-  ledcAttach(actuator, 50, 16);
+  pinMode(H1pin, OUTPUT);
+  pinMode(H2pin, OUTPUT);
 
   pinMode(relaypin, OUTPUT);
   digitalWrite(relaypin, true);
 
   pinMode(RMONPIN, INPUT);
   pinMode(Zonarpin, INPUT);
-    pinMode(CALIB_BUTTON_PIN, INPUT_PULLUP); // ปุ่มต่อ GND → LOW = กด
+  pinMode(CALIB_BUTTON_PIN, INPUT_PULLUP); // ปุ่มต่อ GND → LOW = กด
 
   SerialBT.begin(BT_BAUD, SERIAL_8N1, RXp2, TXp2);
   delay(1000);
@@ -601,36 +600,38 @@ void loop() {
       if (Zonar > 2700) {
         if (distance < STOP_DIST) {
           Serial.println("Arrived WP, switching to next...");
+          digitalWrite(H1pin, 0);
+          digitalWrite(H1pin, 0);
           gotoNextWaypoint();
           return;  // ออก loop รอบนี้ รอรอบหน้าใช้เป้าใหม่
         }
 
         // ยังไม่ถึง → คุมทิศ / วิ่งต่อ
         if (diff > DEADZONE) {
-          ledcWrite(H1pin, duty_1_5ms);
-          ledcWrite(H2pin, duty_2ms);
+          digitalWrite(H1pin, 0);
+          digitalWrite(H1pin, 1);
           Serial.println("TR");
         } else if (diff < -DEADZONE) {
-          ledcWrite(H1pin, duty_1_5ms);
-          ledcWrite(H2pin, duty_1ms);
+          digitalWrite(H1pin, 1);
+          digitalWrite(H1pin, 0);
           Serial.println("TL");
         } else {
-          ledcWrite(H1pin, duty_2ms);
-          ledcWrite(H2pin, duty_1_5ms);
+          digitalWrite(H1pin, 1);
+          digitalWrite(H1pin, 1);
           Serial.println("TW");
         }
       } else {
         // Zonar block → หยุด
-        ledcWrite(H1pin, duty_1_5ms);
-        ledcWrite(H2pin, duty_1_5ms);
+        digitalWrite(H1pin, 0);
+        digitalWrite(H1pin, 0);
         Serial.println("Zonar Block");
       }
 
     } else {
       // GPS ไม่อัปเดต
       countstop++;      if (countstop > 100) { // timeout
-        ledcWrite(H1pin, duty_1_5ms);
-        ledcWrite(H2pin, duty_1_5ms);
+        digitalWrite(H1pin, 0);
+        digitalWrite(H1pin, 0);
         Serial.println("GPS_Time_Out");
       }
       delay(50);
@@ -638,8 +639,8 @@ void loop() {
 
   } else {
     // manual / ยังไม่ upload mission / missionDone
-    ledcWrite(H1pin, duty_1_5ms);
-    ledcWrite(H2pin, duty_1_5ms);
+    digitalWrite(H1pin, 0);
+    digitalWrite(H1pin, 0);
     digitalWrite(relaypin, true);
   }
 
