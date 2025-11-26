@@ -778,15 +778,15 @@ processAccel(ax, ay, az);
 // ====================================================================
 // ============================== AUTO START ==========================
 // ====================================================================
-    if (remoteon < 1300 ){
-        
+    if (remoteon < 1300){
+       
             if (!legsSetup) {
 
                 if (!cornerReady) {
                     Serial.println("❌ cornerReady = false -> ยังไม่พร้อมเริ่ม AUTO");
                     return;
                 }
-                digitalWrite(relaypin, LOW);
+                 digitalWrite(relaypin, LOW);
 
                 Serial.println("=== AUTO START (OUTER SQUARE) ===");
 
@@ -861,50 +861,40 @@ processAccel(ax, ay, az);
 
             isPaused = false;
             pausedTotal = 0;
-       // ====================== ครบ 4 ด้านใน 1 รอบ =====================
-if (legIndex >= 4) {
+        if (legIndex >= 4) {
 
-    motorStop();
-    Serial.println("=== 1 LOOP FINISHED ===");
+            motorStop();
 
-    shrinkRound++;
+            Serial.println("=== 1 LOOP FINISHED ===");
 
-    // ============ ลดทั้ง 4 ด้านแบบกินขอบด้านใน ============
-    distAB -= shrinkStep;   // ลด AB
-    distBC -= shrinkStep;   // ลด BC
-    distCD -= shrinkStep;   // ลด CD
-    distDA -= shrinkStep;   // ลด DA
+            // เริ่มหรือทำต่อการลดกรอบ
+            shrinkRound++;
 
-    // ป้องกันหดจนสั้นเกินไป
-    if (distAB < 1.0 || distBC < 1.0 || distCD < 1.0 || distDA < 1.0) {
-        Serial.println("=== SHRINK FINISHED: ANY SIDE TOO SMALL ===");
-        phase = PHASE_DONE;
-        return;
-    }
+            // ลดเฉพาะด้าน BC / DA
+            BC_current -= shrinkStep;
+            DA_current -= shrinkStep;
+            
 
-    Serial.printf("=== START SHRINK ROUND %d ===\n", shrinkRound);
-    Serial.printf("AB=%.2f   BC=%.2f   CD=%.2f   DA=%.2f\n",
-                  distAB, distBC, distCD, distDA);
+            // ถ้าด้านยาวสั้นเกินไป ให้หยุดระบบ
+            if (BC_current < 1.0 || DA_current < 1.0) {
+                Serial.println("=== SHRINK FINISHED: BC/DA TOO SMALL ===");
+                phase = PHASE_DONE;
+                return;
+            }
 
-    // ============== update ระยะใหม่ ==============
-    distArr[0] = distAB;
-    distArr[1] = distBC;
-    distArr[2] = distCD;
-    distArr[3] = distDA;
+            Serial.printf("=== START SHRINK ROUND %d ===\n", shrinkRound);
 
-    // ============== คำนวณเวลาของแต่ละด้านใหม่ ==============
-    for (int i = 0; i < 4; i++) {
-        runDuration[i] = (unsigned long)(distArr[i] * timePerMeter * 1000);
-    }
+            // เตรียมระยะรอบใหม่
+            prepareLegs();
 
-    // ============== reset state ==============
-    legIndex = 0;
-    isPaused = false;
-    pausedTotal = 0;
-    phase = PHASE_ROTATE;
+            // เริ่มรอบใหม่ที่ด้าน AB เสมอ
+            legIndex = 0;
+            isPaused = false;
+            pausedTotal = 0;
 
-    return;
-}
+            phase = PHASE_ROTATE;
+            return;
+        }
         else {
                 phase = PHASE_ROTATE;
             }
