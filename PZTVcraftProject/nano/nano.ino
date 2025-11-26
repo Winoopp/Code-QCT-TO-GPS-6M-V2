@@ -78,8 +78,11 @@ int classifyPulse(unsigned long p) {
   return 0;
 }
 
+char lastCmd = 'S';
+
 void setup() {
   Serial.begin(9600);
+  Serial1.begin(9600);   // ใช้ Serial1 รับคำสั่งทิศทางจากบอร์ดอีกตัว
 
   // ขารับ PWM
   pinMode(pwmPosPin,    INPUT);
@@ -114,6 +117,8 @@ void setup() {
   // เซอร์โว
   myServo.attach(servoPin);
   myServo.write(0);
+
+  
 }
 
 void loop() {
@@ -190,52 +195,52 @@ void loop() {
     driveMotor(M3_PWM, M3_IN1, M3_IN2, true,  motorSpeed);
     driveMotor(M4_PWM, M4_IN1, M4_IN2, true,  motorSpeed);
     usedPwmDirection = true;
-  } else if (ex1 == 15 && ex2 == 15) {
+  } else if (ex1 == 15 && ex2 == 15) {  
     stopAllMotors();
     usedPwmDirection = true;
   }
+  
+    // ===== ถ้าไม่ได้ใช้โหมด PWM → ใช้คำสั่งจาก RX/TX (Serial1) =====
+  if (pulseExtra1 < 20 && pulseExtra2 < 20) {
+    Serial.print("New");
+    // ถ้ามีข้อมูลใหม่ใน Serial1 ให้อ่านมาเก็บเป็นคำสั่งล่าสุด
+    while (Serial1.available() > 0) {
+      char c = Serial1.read();
+      // รับแค่ตัวที่เรารู้จัก กันข้อมูลขยะ
+        lastCmd = c;
+        Serial.print("New cmd from Serial1: ");
+        Serial.println(lastCmd);
+    }
 
-  // ===== 5) ถ้า "ยังไม่ได้ใช้โหมด PWM" → ใช้โหมด Digital จาก pwmRelayPin1 / pwmRelayPin2 =====
-  if (!usedPwmDirection) {
-    int d1 = digitalRead(pwmRelayPin1);
-    int d2 = digitalRead(pwmRelayPin2);
-
-    Serial.print("digital dir d1=");
-    Serial.print(d1);
-    Serial.print(" d2=");
-    Serial.println(d2);
-
-    if (d1 == LOW && d2 == LOW) {
-      // 0,0 → หยุด
+    // ตีความ lastCmd แล้วสั่งมอเตอร์
+    if (lastCmd == 'S') {
+      // Stop
       stopAllMotors();
 
-    } else if (d1 == HIGH && d2 == HIGH) {
-      // 1,1 → เดินหน้า
+    } else if (lastCmd == 'F') {
+      // Forward → ทั้ง 4 เดินหน้า
       driveMotor(M1_PWM, M1_IN1, M1_IN2, true,  motorSpeed);
       driveMotor(M2_PWM, M2_IN1, M2_IN2, true,  motorSpeed);
       driveMotor(M3_PWM, M3_IN1, M3_IN2, true,  motorSpeed);
       driveMotor(M4_PWM, M4_IN1, M4_IN2, true,  motorSpeed);
 
-    } else if (d1 == HIGH && d2 == LOW) {
-      // 1,0 → เลี้ยวซ้าย (M3 M4 เดินหน้า, M1 M2 ถอยหลัง)
+    } else if (lastCmd == 'L') {
+      // Left → M3 M4 เดินหน้า, M1 M2 ถอยหลัง
       driveMotor(M1_PWM, M1_IN1, M1_IN2, false, motorSpeed);
       driveMotor(M2_PWM, M2_IN1, M2_IN2, false, motorSpeed);
       driveMotor(M3_PWM, M3_IN1, M3_IN2, true,  motorSpeed);
       driveMotor(M4_PWM, M4_IN1, M4_IN2, true,  motorSpeed);
 
-    } else if (d1 == LOW && d2 == HIGH) {
-      // 0,1 → เลี้ยวขวา (M1 M2 เดินหน้า, M3 M4 ถอยหลัง)
+    } else if (lastCmd == 'R') {
+      // Right → M1 M2 เดินหน้า, M3 M4 ถอยหลัง
       driveMotor(M1_PWM, M1_IN1, M1_IN2, true,  motorSpeed);
       driveMotor(M2_PWM, M2_IN1, M2_IN2, true,  motorSpeed);
       driveMotor(M3_PWM, M3_IN1, M3_IN2, false, motorSpeed);
       driveMotor(M4_PWM, M4_IN1, M4_IN2, false, motorSpeed);
-
-    } else {
-      // กันเหนียว ถ้ามีอะไรแปลก → หยุด
-      stopAllMotors();
     }
   }
 
+
   Serial.println("----");
-  delay(100);
+  delay(20);
 }
